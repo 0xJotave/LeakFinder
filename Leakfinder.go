@@ -2,6 +2,7 @@ package main
 
 import (
 	"LeakFinder/scanner"
+	"fmt"
 	"log"
 )
 
@@ -15,4 +16,8 @@ func main() {
 	}
 
 	scanner.ReadPath(repoPath)
+	err = scanner.FinalizeReports(repoPath)
+	if err != nil {
+		fmt.Printf("[ERRO] %v\n", err)
+	}
 }

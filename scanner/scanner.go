@@ -11,6 +11,7 @@ import (
 )
 
 var CompiledPatterns map[string]*regexp.Regexp
+var Reports []Report
 
 func ReceiveRepo() string {
 	repoPath := flag.String("repo", "", "Caminho para o Repositório")
@@ -32,7 +33,6 @@ func ReadPath(repoPath string) {
 			fmt.Printf("[ERRO] Não foi possível acessar o caminho: %s\n", path)
 			return err
 		}
-
 		if d.IsDir() {
 			if d.Name() == ".git" {
 				return filepath.SkipDir
@@ -69,6 +69,12 @@ func ReadFile(archive string, repoPath string) error {
 		for name, pattern := range CompiledPatterns {
 			if pattern.MatchString(lineContent) {
 				relativePath, err := filepath.Rel(repoPath, archive)
+				Reports = append(Reports, Report{
+					FilePath: relativePath,
+					LeakType: name,
+					Line:     line,
+					Content:  lineContent,
+				})
 				if err != nil {
 					fmt.Printf("[ERRO] Não foi possível calcular o caminho relativo: %v\n", err)
 					continue
@@ -84,5 +90,13 @@ func ReadFile(archive string, repoPath string) error {
 		return fmt.Errorf("[ERRO] Não foi possível ler o arquivo: %s\n%v", archive, err)
 	}
 
+	return nil
+}
+
+func FinalizeReports(repoName string) error {
+	err := MakeReports(Reports, filepath.Base(repoName))
+	if err != nil {
+		return fmt.Errorf("[ERRO] Não foi possível salvar o relatório: %v", err)
+	}
 	return nil
 }
