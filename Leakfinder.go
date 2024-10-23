@@ -3,7 +3,6 @@ package main
 import (
 	"LeakFinder/scanner"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -12,10 +11,7 @@ import (
 
 var cRed = color.New(color.FgHiRed).Add(color.Bold)
 
-func AsciiArt(wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	asciiArt := `
+const asciiArt = `
  ██▓    ▓█████ ▄▄▄       ██ ▄█▀  █████▒██▓ ███▄    █ ▓█████▄ ▓█████  ██▀███  
 ▓██▒    ▓█   ▀▒████▄     ██▄█▒ ▓██   ▒▓██▒ ██ ▀█   █ ▒██▀ ██▌▓█   ▀ ▓██ ▒ ██▒
 ▒██░    ▒███  ▒██  ▀█▄  ▓███▄░ ▒████ ░▒██▒▓██  ▀█ ██▒░██   █▌▒███   ▓██ ░▄█ ▒
@@ -25,7 +21,10 @@ func AsciiArt(wg *sync.WaitGroup) {
 ░ ░ ▒  ░ ░ ░  ░ ▒   ▒▒ ░░ ░▒ ▒░ ░      ▒ ░░ ░░   ░ ▒░ ░ ▒  ▒  ░ ░  ░  ░▒ ░ ▒░
   ░ ░      ░    ░   ▒   ░ ░░ ░  ░ ░    ▒ ░   ░   ░ ░  ░ ░  ░    ░     ░░   ░ 
     ░  ░   ░  ░     ░  ░░  ░           ░           ░    ░       ░  ░   ░     
-	`
+`
+
+func AsciiArt(wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	for _, char := range asciiArt {
 		cRed.Print(string(char))
@@ -38,23 +37,25 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go AsciiArt(&wg)
+	var artDisplayed bool
+
+	if !artDisplayed {
+		go AsciiArt(&wg)
+		artDisplayed = true
+	}
 
 	repoPath := scanner.ReceiveRepo()
 
 	wg.Wait()
 
-	var err error
-	scanner.CompiledPatterns, err = scanner.GetPatterns()
-	if err != nil {
-		scanner.ErroColor.Print("[ERRO] ")
-		log.Fatalf("Falha ao compilar padrões: %v\n", err)
+	scanner.CompiledPatterns, _ = scanner.GetPatterns()
+
+	if err := scanner.ReadPath(repoPath); err != nil {
+		scanner.HandleError(err.Error(), "")
+		return
 	}
 
-	scanner.ReadPath(repoPath)
-	err = scanner.FinalizeReports(repoPath)
-	if err != nil {
-		scanner.ErroColor.Print("[ERRO] ")
-		log.Fatal(err)
+	if err := scanner.FinalizeReports(repoPath); err != nil {
+		scanner.HandleError(err.Error(), "")
 	}
 }

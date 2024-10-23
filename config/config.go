@@ -1,6 +1,7 @@
 package config
 
 import (
+	"LeakFinder/scanner"
 	"encoding/json"
 	"os"
 )
@@ -10,17 +11,29 @@ type Config struct {
 	Patterns   map[string]string `json:"patterns"`
 }
 
-func LoadConfig(filepath string) (Config, error) {
+func LoadConfig(filepath string) Config {
 	file, err := os.Open(filepath)
 	if err != nil {
-		return Config{}, err
+		scanner.HandleError("Não foi possível abrir o arquivo: %s\n", filepath)
 	}
 	defer file.Close()
 
 	var config Config
 	if err := json.NewDecoder(file).Decode(&config); err != nil {
-		return Config{}, err
+		scanner.HandleError("Não foi possível decodificar a configuração\n", "")
 	}
 
-	return config, nil
+	if err := validateConfig(config); err != nil {
+		scanner.HandleError("Configuração Inválida\n", "")
+	}
+
+	return config
+}
+
+func validateConfig(config Config) error {
+	if len(config.IgnoreDirs) == 0 {
+		scanner.HandleError("A lista de diretórios a ignorar não pode estar vazia\n", "")
+	}
+
+	return nil
 }

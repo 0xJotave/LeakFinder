@@ -13,12 +13,15 @@ import (
 )
 
 var (
+	LeakColor   = color.New(color.FgHiMagenta).Add(color.Bold)
+	ErroColor   = color.New(color.FgHiRed).Add(color.Bold)
+	InfoColor   = color.New(color.FgHiBlue).Add(color.Bold)
+	SucessColor = color.New(color.FgHiGreen).Add(color.Bold)
+)
+
+var (
 	CompiledPatterns map[string]*regexp.Regexp
 	Reports          []Report
-	LeakColor        = color.New(color.FgHiMagenta).Add(color.Bold)
-	ErroColor        = color.New(color.FgHiRed).Add(color.Bold)
-	InfoColor        = color.New(color.FgHiBlue).Add(color.Bold)
-	SucessColor      = color.New(color.FgHiGreen).Add(color.Bold)
 	hasErrors        = false
 )
 
@@ -27,9 +30,7 @@ func ReceiveRepo() string {
 	flag.Parse()
 
 	if *repoPath == "" {
-		ErroColor.Print("[ERRO] ")
-		fmt.Println("Você deve fornecer o caminho para o repositório usando --repo")
-		hasErrors = true
+		HandleError("Você deve fornecer o caminho para o repositório usando --repo\n", "")
 		os.Exit(1)
 	}
 
@@ -42,9 +43,7 @@ func ReadPath(repoPath string) error {
 	fmt.Printf("Iniciando a leitura do repositório: %s\n", repoPath)
 	err := filepath.WalkDir(repoPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			ErroColor.Print("[ERRO] ")
-			fmt.Printf("Não foi possível acessar o caminho: %s\n", path)
-			hasErrors = true
+			HandleError("Não foi possível acessar o caminho: %s\n", path)
 			return err
 		}
 		if d.IsDir() {
@@ -53,31 +52,23 @@ func ReadPath(repoPath string) error {
 			}
 		} else {
 			if err := ReadFile(path, repoPath); err != nil {
-				ErroColor.Print("[ERRO] ")
-				fmt.Printf("Falha ao ler o arquivo: %s\n%v\n", path, err)
-				hasErrors = true
+				HandleError("Falha ao ler o arquivo: %s\n", path)
 				return err
 			}
 		}
 		return nil
 	})
-
 	if err != nil {
-		ErroColor.Print("[ERRO] ")
-		fmt.Printf("Ocorreu um erro durante a varredura do Repositório: %s\n%v\n", repoPath, err)
-		hasErrors = true
+		HandleError("Ocorreu um erro durante a varredura do Repositório: %s\n", repoPath)
 		return err
 	}
-
 	return nil
 }
 
 func ReadFile(archive string, repoPath string) error {
 	file, err := os.Open(archive)
 	if err != nil {
-		ErroColor.Print("[ERRO] ")
-		fmt.Printf("Não foi possível abrir o arquivo %s\n", archive)
-		hasErrors = true
+		HandleError("Não foi possível abrir o arquivo: %s\n", archive)
 		return err
 	}
 	defer file.Close()
@@ -89,38 +80,38 @@ func ReadFile(archive string, repoPath string) error {
 
 	for scanner.Scan() {
 		lineContent := scanner.Text()
-
-		for name, pattern := range CompiledPatterns {
-			if pattern.MatchString(lineContent) {
-				relativePath, err := filepath.Rel(repoPath, archive)
-				Reports = append(Reports, Report{
-					FilePath: relativePath,
-					LeakType: name,
-					Line:     line,
-					Content:  lineContent,
-				})
-				if err != nil {
-					ErroColor.Print("[ERRO] ")
-					fmt.Printf("Não foi possível calcular o caminho relativo: %v\n", err)
-					hasErrors = true
-					continue
-				}
-				LeakColor.Print("[ATENÇÃO] ")
-				fmt.Printf("Vazamento Encontrado em %s: %s\n Linha: %d\n --> %s\n\n", relativePath, name, line, lineContent)
-				break
-			}
-		}
+		checkForLeaks(line, lineContent, repoPath, archive)
 		line++
+
 	}
 
 	if err := scanner.Err(); err != nil {
-		ErroColor.Print("[ERRO] ")
-		fmt.Printf("Não foi possível ler o arquivo: %s\n%v", archive, err)
-		hasErrors = true
+		HandleError("Não foi possível ler o arquivo: %s\n", archive)
 		return err
 	}
 
 	return nil
+}
+
+func checkForLeaks(line int, lineContent, repoPath, archive string) {
+	for name, pattern := range CompiledPatterns {
+		if pattern.MatchString(lineContent) {
+			relativePath, err := filepath.Rel(repoPath, archive)
+			Reports = append(Reports, Report{
+				FilePath: relativePath,
+				LeakType: name,
+				Line:     line,
+				Content:  lineContent,
+			})
+			if err != nil {
+				HandleError("Não foi possível calcular o caminho relativo\n", "")
+				continue
+			}
+			LeakColor.Print("[ATENÇÃO] ")
+			fmt.Printf("Vazamento Encontrado em %s: %s\n Linha: %d\n --> %s\n\n", relativePath, name, line, lineContent)
+			break
+		}
+	}
 }
 
 func FinalizeReports(repoName string) error {
@@ -140,9 +131,14 @@ func FinalizeReports(repoName string) error {
 
 	err := MakeReports(Reports, filepath.Base(repoName))
 	if err != nil {
-		ErroColor.Print("[ERRO] ")
-		fmt.Printf("Não foi possível salvar o relatório: %v", err)
+		HandleError("Não foi possível salvar o relatório\n", "")
 		return err
 	}
 	return nil
+}
+
+func HandleError(message string, conteudo string) {
+	ErroColor.Print("[ERRO] ")
+	fmt.Printf(message, conteudo)
+	hasErrors = true
 }
