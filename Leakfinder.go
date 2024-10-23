@@ -10,6 +10,8 @@ import (
 	"github.com/fatih/color"
 )
 
+var cRed = color.New(color.FgHiRed).Add(color.Bold)
+
 func AsciiArt(wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -24,10 +26,9 @@ func AsciiArt(wg *sync.WaitGroup) {
   ░ ░      ░    ░   ▒   ░ ░░ ░  ░ ░    ▒ ░   ░   ░ ░  ░ ░  ░    ░     ░░   ░ 
     ░  ░   ░  ░     ░  ░░  ░           ░           ░    ░       ░  ░   ░     
 	`
-	c := color.New(color.FgHiRed).Add(color.Bold)
 
 	for _, char := range asciiArt {
-		c.Print(string(char))
+		cRed.Print(string(char))
 		time.Sleep(4 * time.Millisecond)
 	}
 	fmt.Println()
@@ -46,12 +47,14 @@ func main() {
 	var err error
 	scanner.CompiledPatterns, err = scanner.GetPatterns()
 	if err != nil {
-		log.Fatalf("[ERRO] Falha ao compilar padrões: %v\n", err)
+		scanner.ErroColor.Print("[ERRO] ")
+		log.Fatalf("Falha ao compilar padrões: %v\n", err)
 	}
 
 	scanner.ReadPath(repoPath)
 	err = scanner.FinalizeReports(repoPath)
 	if err != nil {
-		fmt.Printf("[ERRO] %v\n", err)
+		scanner.ErroColor.Print("[ERRO] ")
+		log.Fatal(err)
 	}
 }

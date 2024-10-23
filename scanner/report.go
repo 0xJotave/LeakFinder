@@ -26,7 +26,9 @@ func MakeReports(reports []Report, repoName string) error {
 
 	file, err := os.OpenFile(reportPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("[ERRO] Não foi possível criar ou abrir o arquivo de relatório: %v", err)
+		ErroColor.Print("[ERRO] ")
+		fmt.Printf("Não foi possível criar ou abrir o arquivo de relatório: %v\n", err)
+		return err
 	}
 	defer file.Close()
 
@@ -42,7 +44,6 @@ func MakeReports(reports []Report, repoName string) error {
 		} `json:"Leaks"`
 	}
 
-	// Para verificar se um vazamento já foi visto
 	leakSeen := make(map[string]struct{})
 
 	for filePath, leaks := range groupedReports {
@@ -53,10 +54,8 @@ func MakeReports(reports []Report, repoName string) error {
 		}
 
 		for _, leak := range leaks {
-			// Criar um identificador único para cada vazamento
 			leakIdentifier := fmt.Sprintf("%s:%d:%s", leak.LeakType, leak.Line, leak.Content)
 
-			// Verificar se o vazamento já foi visto
 			if _, exists := leakSeen[leakIdentifier]; !exists {
 				leakSeen[leakIdentifier] = struct{}{}
 				leakReports = append(leakReports, struct {
@@ -71,7 +70,6 @@ func MakeReports(reports []Report, repoName string) error {
 			}
 		}
 
-		// Adicionar os vazamentos do arquivo processado
 		if len(leakReports) > 0 {
 			finalReports = append(finalReports, struct {
 				FilePath string `json:"File"`
@@ -88,9 +86,12 @@ func MakeReports(reports []Report, repoName string) error {
 	}
 
 	if err = encoder.Encode(finalReports); err != nil {
-		return fmt.Errorf("[ERRO] Não foi possível escrever no arquivo de relatório: %v", err)
+		ErroColor.Print("[ERRO] ")
+		fmt.Printf("Não foi possível escrever no arquivo de relatório: %v\n", err)
+		return err
 	}
 
+	SucessColor.Print("[SUCESS] ")
 	fmt.Printf("Relatório salvo com sucesso em: %s\n", reportPath)
 	return nil
 }
