@@ -1,4 +1,4 @@
-module LeakFinder
+module LeakGFinder
 
 go 1.23.2
 

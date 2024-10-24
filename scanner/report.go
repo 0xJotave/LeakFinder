@@ -14,7 +14,6 @@ type Report struct {
 	Content  string `json:"Content"`
 }
 
-// Função principal que orquestra o processo de geração de relatórios
 func MakeReports(reports []Report, repoName string) error {
 	groupedReports := groupReportsByFile(reports)
 	reportPath, file, err := createReportFile(repoName)
@@ -40,8 +39,7 @@ func createReportFile(repoName string) (string, *os.File, error) {
 
 	file, err := os.OpenFile(reportPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		ErroColor.Print("[ERRO] ")
-		fmt.Printf("Não foi possível criar ou abrir o arquivo de relatório: %v\n", err)
+		HandleError("Não foi possível criar ou abrir o arquivo de relatório", "")
 		return "", nil, err
 	}
 
@@ -55,8 +53,7 @@ func encodeReportsToJSON(groupedReports map[string][]Report, file *os.File, repo
 	finalReports := prepareFinalReports(groupedReports)
 
 	if err := encoder.Encode(finalReports); err != nil {
-		ErroColor.Print("[ERRO] ")
-		fmt.Printf("Não foi possível escrever no arquivo de relatório: %v\n", err)
+		HandleError("Não foi possível escrever no arquivo no relatório", "")
 		return err
 	}
 

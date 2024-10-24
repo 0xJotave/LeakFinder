@@ -1,7 +1,7 @@
 package config
 
 import (
-	"LeakFinder/scanner"
+	"LeakGFinder/scanner"
 	"encoding/json"
 	"os"
 )

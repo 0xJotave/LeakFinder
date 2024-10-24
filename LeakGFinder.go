@@ -1,7 +1,7 @@
 package main
 
 import (
-	"LeakFinder/scanner"
+	"LeakGFinder/scanner"
 	"fmt"
 	"sync"
 	"time"
